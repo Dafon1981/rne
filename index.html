@@ -91,58 +91,62 @@
             micButton.addEventListener('click', () => { if (!isRecording) { isRecording = true; micButton.classList.add('recording'); try { recognition.start(); } catch(e) { console.error("Error al iniciar el reconocimiento:", e); alert("El micrófono ya está en uso o hubo un error al iniciarlo."); isRecording = false; micButton.classList.remove('recording'); } } else { recognition.stop(); isRecording = false; micButton.classList.remove('recording'); } });
         }
 
-        // --- LÓGICA DE BÚSQUEDA Y DISPLAY ---
+        // =================================================================
+        // ¡FUNCIÓN DE BÚSQUEDA MODIFICADA! - Usa la nueva función SQL
+        // =================================================================
         async function findDoctors(name) {
             suggestionsBox.innerHTML = '<p>Buscando...</p>';
             try {
-                const { data: doctores, error } = await supabaseClient
-                    .from('doctores')
-                    .select('nombre, especialidad, rne, condicion, contacto')
-                    .ilike('nombre', `%${name}%`);
+                // Llamamos a la función 'buscar_texto_sin_acentos' que creamos en la DB
+                const { data, error } = await supabaseClient.rpc('buscar_texto_sin_acentos', {
+                    tabla: 'doctores',
+                    columna: 'nombre',
+                    valor_buscado: name
+                });
+
                 if (error) throw error;
-                displaySuggestions(doctores);
+                displaySuggestions(data);
             } catch (error) {
                 console.error('Error al buscar doctores:', error);
                 suggestionsBox.innerHTML = `<p style="color: red;">Error al buscar: ${error.message}</p>`;
             }
         }
 
+        // =================================================================
+        // ¡FUNCIÓN DE DISPLAY MODIFICADA! - Con selección automática
+        // =================================================================
         function displaySuggestions(doctores) {
             suggestionsBox.innerHTML = '';
-            if (doctores.length === 0) {
+            if (!doctores || doctores.length === 0) {
                 suggestionsBox.innerHTML = '<p>No se encontraron coincidencias.</p>';
                 return;
             }
+
+            // ¡NUEVA LÓGICA! Si solo hay un resultado, lo selecciona automáticamente.
+            if (doctores.length === 1) {
+                selectDoctor(doctores[0]);
+                return; // Termina la función aquí
+            }
+
+            // Si hay más de un resultado, muestra la lista.
             doctores.forEach(doctor => {
                 const suggestionDiv = document.createElement('div');
                 suggestionDiv.className = 'suggestion-item';
                 suggestionDiv.textContent = doctor.nombre;
-                
-                // ¡CORRECCIÓN CLAVE! - El listener ahora llama a la función selectDoctor
-                // pasando el objeto 'doctor' completo.
                 suggestionDiv.addEventListener('click', () => {
                     selectDoctor(doctor);
                 });
-                
                 suggestionsBox.appendChild(suggestionDiv);
             });
         }
 
-        // =================================================================
-        // ¡FUNCIÓN CORREGIDA Y FINAL!
-        // =================================================================
+        // --- FUNCIÓN DE SELECCIÓN (sin cambios, ya era correcta) ---
         function selectDoctor(doctor) {
-            // Asigna correctamente los valores del objeto 'doctor' a los elementos del display.
-            // Si un valor es nulo o indefinido, muestra un guion o un texto por defecto.
             rneDisplay.textContent = doctor.rne || '-';
             especialidadDisplay.textContent = doctor.especialidad || 'Sin especialidad';
             nombreDisplay.textContent = doctor.nombre || 'Sin nombre';
-
-            // Reproduce el sonido de confirmación.
             beepSound.currentTime = 0;
             beepSound.play().catch(e => console.error("Error al reproducir sonido:", e));
-            
-            // Limpia la interfaz para la siguiente búsqueda.
             searchInput.value = '';
             suggestionsBox.innerHTML = '';
         }
