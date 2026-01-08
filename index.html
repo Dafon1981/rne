@@ -6,6 +6,7 @@
     <title>Búsqueda de RNE por Voz y Texto</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
+        /* --- Todos los estilos permanecen sin cambios --- */
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap' );
         :root { --primary-color: #007bff; --danger-color: #dc3545; --light-color: #f8f9fa; --dark-color: #343a40; --background-color: #e9ecef; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Roboto', sans-serif; background-color: var(--background-color); display: flex; justify-content: center; align-items: center; }
@@ -14,18 +15,7 @@
         #display-rne { font-size: 4.5rem; font-weight: 900; color: var(--dark-color); margin: 0; line-height: 1; min-height: 70px; }
         #display-especialidad { font-size: 1.5rem; font-weight: 300; color: #6c757d; margin: 5px 0 0 0; min-height: 27px; }
         #display-nombre { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin: 10px 0 0 0; min-height: 27px; }
-        
-        /* --- NUEVO CAMPO DE BÚSQUEDA POR TEXTO --- */
-        #search-input {
-            width: 100%;
-            padding: 15px;
-            font-size: 1.1rem;
-            border: 1px solid #ced4da;
-            border-radius: 10px;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-
+        #search-input { width: 100%; padding: 15px; font-size: 1.1rem; border: 1px solid #ced4da; border-radius: 10px; box-sizing: border-box; margin-bottom: 15px; }
         .suggestions-area { min-height: 100px; max-height: 200px; overflow-y: auto; }
         .suggestion-item { padding: 15px; background-color: #f8f9fa; border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: background-color 0.2s, transform 0.2s; font-size: 1.1rem; }
         .suggestion-item:hover { background-color: #e2e6ea; transform: scale(1.02); }
@@ -45,12 +35,8 @@
             <p id="display-especialidad">Especialidad</p>
             <p id="display-nombre">Nombre del Doctor</p>
         </div>
-
-        <!-- ¡NUEVO ELEMENTO! -->
         <input type="text" id="search-input" placeholder="Escriba un nombre para buscar...">
-
         <div class="suggestions-area" id="suggestions-box"></div>
-        
         <div class="mic-button-area">
             <button id="mic-button">🎤</button>
         </div>
@@ -59,7 +45,7 @@
     <audio id="beep-sound" src="https://cdn.jsdelivr.net/gh/google/soundforgood/examples/beep.mp3" preload="auto"></audio>
 
     <script>
-        // --- CONFIGURACIÓN Y ELEMENTOS ---
+        // --- CONFIGURACIÓN Y ELEMENTOS (sin cambios ) ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey );
@@ -70,25 +56,22 @@
         const suggestionsBox = document.getElementById('suggestions-box');
         const micButton = document.getElementById('mic-button');
         const beepSound = document.getElementById('beep-sound');
-        const searchInput = document.getElementById('search-input'); // Nuevo elemento
+        const searchInput = document.getElementById('search-input');
         let isRecording = false;
         let searchTimeout;
 
-        // --- LÓGICA DE BÚSQUEDA POR TEXTO ---
+        // --- LÓGICA DE BÚSQUEDA POR TEXTO (sin cambios) ---
         searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout); // Cancela el temporizador anterior
+            clearTimeout(searchTimeout);
             const query = searchInput.value;
-            if (query.length > 2) { // Solo busca si hay más de 2 caracteres
-                // Espera 300ms después de que el usuario deja de escribir para buscar
-                searchTimeout = setTimeout(() => {
-                    findDoctors(query);
-                }, 300);
+            if (query.length > 2) {
+                searchTimeout = setTimeout(() => { findDoctors(query); }, 300);
             } else {
-                suggestionsBox.innerHTML = ''; // Limpia si la búsqueda es muy corta
+                suggestionsBox.innerHTML = '';
             }
         });
 
-        // --- LÓGICA DE RECONOCIMIENTO DE VOZ ---
+        // --- LÓGICA DE RECONOCIMIENTO DE VOZ (sin cambios) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             alert("Tu navegador no soporta el reconocimiento de voz. Por favor, usa Chrome o Edge.");
@@ -98,13 +81,11 @@
             recognition.lang = 'es-ES';
             recognition.continuous = false;
             recognition.interimResults = false;
-
             recognition.onresult = (event) => {
                 const spokenText = event.results[0][0].transcript;
-                searchInput.value = spokenText; // Pone el texto hablado en el input
+                searchInput.value = spokenText;
                 findDoctors(spokenText);
             };
-            // ... (el resto de la lógica de voz no cambia)
             recognition.onend = () => { isRecording = false; micButton.classList.remove('recording'); };
             recognition.onerror = (event) => { console.error('Error de reconocimiento de voz:', event.error); isRecording = false; micButton.classList.remove('recording'); alert(`Error de micrófono: ${event.error}`); };
             micButton.addEventListener('click', () => { if (!isRecording) { isRecording = true; micButton.classList.add('recording'); try { recognition.start(); } catch(e) { console.error("Error al iniciar el reconocimiento:", e); alert("El micrófono ya está en uso o hubo un error al iniciarlo."); isRecording = false; micButton.classList.remove('recording'); } } else { recognition.stop(); isRecording = false; micButton.classList.remove('recording'); } });
@@ -118,7 +99,6 @@
                     .from('doctores')
                     .select('nombre, especialidad, rne, condicion, contacto')
                     .ilike('nombre', `%${name}%`);
-
                 if (error) throw error;
                 displaySuggestions(doctores);
             } catch (error) {
@@ -137,28 +117,32 @@
                 const suggestionDiv = document.createElement('div');
                 suggestionDiv.className = 'suggestion-item';
                 suggestionDiv.textContent = doctor.nombre;
+                
+                // ¡CORRECCIÓN CLAVE! - El listener ahora llama a la función selectDoctor
+                // pasando el objeto 'doctor' completo.
                 suggestionDiv.addEventListener('click', () => {
-                    // ¡LÓGICA CORREGIDA! - Llama a la función con el objeto doctor completo
                     selectDoctor(doctor);
-
                 });
+                
                 suggestionsBox.appendChild(suggestionDiv);
             });
         }
 
         // =================================================================
-        // ¡FUNCIÓN CORREGIDA!
+        // ¡FUNCIÓN CORREGIDA Y FINAL!
         // =================================================================
         function selectDoctor(doctor) {
-            // Asigna los valores del objeto 'doctor' a los elementos del display
+            // Asigna correctamente los valores del objeto 'doctor' a los elementos del display.
+            // Si un valor es nulo o indefinido, muestra un guion o un texto por defecto.
             rneDisplay.textContent = doctor.rne || '-';
             especialidadDisplay.textContent = doctor.especialidad || 'Sin especialidad';
             nombreDisplay.textContent = doctor.nombre || 'Sin nombre';
 
+            // Reproduce el sonido de confirmación.
             beepSound.currentTime = 0;
             beepSound.play().catch(e => console.error("Error al reproducir sonido:", e));
             
-            // Limpia el input y las sugerencias para una nueva búsqueda
+            // Limpia la interfaz para la siguiente búsqueda.
             searchInput.value = '';
             suggestionsBox.innerHTML = '';
         }
