@@ -9,18 +9,12 @@
         /* Estilos base (sin cambios ) */
         body, html { margin: 0; padding: 0; width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f4f6f8; }
         .container { width: 90%; max-width: 400px; background: white; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); padding: 30px; text-align: center; }
-        
-        /* Estilos de la pantalla de resultados (sin cambios) */
         #result-display { border: 1px solid #e0e0e0; border-radius: 15px; padding: 20px; margin-bottom: 20px; min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
         #rne-display { font-size: 48px; font-weight: bold; color: #333; margin: 0; }
         #especialidad-display { font-size: 18px; color: #666; margin-top: 5px; }
         #nombre-display { font-size: 20px; color: #007bff; font-weight: 600; margin-top: 10px; }
-
-        /* --- ¡NUEVOS ESTILOS PARA LA FIRMA! --- */
         #firma-container { margin-top: 15px; }
-        #firma-display { max-width: 80%; height: 60px; object-fit: contain; border: 1px solid #eee; border-radius: 8px; }
-
-        /* Estilos del área de búsqueda (sin cambios) */
+        #firma-display { max-width: 80%; height: 60px; object-fit: contain; border: 1px solid #eee; border-radius: 8px; cursor: pointer; /* ¡Añadido cursor para indicar que es clickeable! */ }
         .search-area { margin-bottom: 20px; }
         #search-input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 25px; box-sizing: border-box; font-size: 16px; text-align: center; }
         #suggestions-box { max-height: 150px; overflow-y: auto; margin-top: 10px; }
@@ -29,36 +23,56 @@
         .mic-button { background-color: #dc3545; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4); transition: transform 0.2s; }
         .mic-button.recording { transform: scale(1.1); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.7); } 70% { box-shadow: 0 0 0 15px rgba(220,53,69,0); } 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); } }
-        
-        /* Audio (sin cambios) */
         #beep-sound { display: none; }
+
+        /* --- ¡NUEVOS ESTILOS PARA EL MODAL DE LA IMAGEN! --- */
+        .image-modal {
+            display: none; /* Oculto por defecto */
+            position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center; align-items: center;
+        }
+        .modal-content-image {
+            max-width: 90%; max-height: 90%;
+        }
+        .close-modal {
+            position: absolute; top: 20px; right: 35px;
+            color: #fff; font-size: 40px; font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <!-- El contenido del container no cambia -->
         <div id="result-display">
             <h1 id="rne-display">-</h1>
             <p id="especialidad-display">Especialidad</p>
             <p id="nombre-display">Nombre del Doctor</p>
-            <!-- ¡NUEVO CONTENEDOR PARA LA FIRMA! -->
             <div id="firma-container" style="display: none;">
-                <img id="firma-display" alt="Firma del Doctor">
+                <!-- ¡Añadido el onclick aquí! -->
+                <img id="firma-display" alt="Firma del Doctor" onclick="openImageModal(this.src)">
             </div>
         </div>
-
         <div class="search-area">
             <input type="text" id="search-input" placeholder="Escribe o presiona el micrófono...">
             <div id="suggestions-box"></div>
         </div>
-
         <button id="mic-button" class="mic-button">🎤</button>
     </div>
 
     <audio id="beep-sound" src="https://cdn.jsdelivr.net/gh/Dafon1981/sabre/beep.mp3"></audio>
 
+    <!-- ¡NUEVO MODAL PARA LA IMAGEN AMPLIFICADA! -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal( )">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content-image" id="modalImage">
+    </div>
+
     <script>
-        // --- Configuración y Elementos (sin cambios ) ---
+        // --- Configuración y Elementos (sin cambios) ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
@@ -70,69 +84,56 @@
         const suggestionsBox = document.getElementById('suggestions-box');
         const micButton = document.getElementById('mic-button');
         const beepSound = document.getElementById('beep-sound');
-        
-        // --- ¡NUEVO ELEMENTO PARA LA FIRMA! ---
         const firmaContainer = document.getElementById('firma-container');
         const firmaDisplay = document.getElementById('firma-display');
+        
+        // --- ¡NUEVOS ELEMENTOS PARA EL MODAL! ---
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
 
         let allDoctores = [];
         let searchTimeout;
 
-        // --- Lógica de Búsqueda (sin cambios) ---
+        // --- ¡NUEVAS FUNCIONES PARA EL MODAL! ---
+        function openImageModal(src) {
+            modalImage.src = src;
+            imageModal.style.display = 'flex'; // Usamos flex para centrar
+        }
+        function closeImageModal() {
+            imageModal.style.display = 'none';
+        }
+
+        // --- Lógica de Búsqueda y Sugerencias (sin cambios) ---
         async function searchDoctores(searchTerm) {
-            if (searchTerm.length < 2) {
-                suggestionsBox.innerHTML = '';
-                return;
-            }
+            if (searchTerm.length < 2) { suggestionsBox.innerHTML = ''; return; }
             try {
-                const { data, error } = await supabase
-                    .from('doctores')
-                    .select('*')
-                    .ilike('nombre', `%${searchTerm}%`);
+                const { data, error } = await supabase.from('doctores').select('*').ilike('nombre', `%${searchTerm}%`);
                 if (error) throw error;
                 allDoctores = data;
                 displaySuggestions(data);
-
-                if (data.length === 1) {
-                    selectDoctor(data[0].id);
-                }
-            } catch (error) {
-                console.error('Error buscando doctores:', error);
-                suggestionsBox.innerHTML = '<div class="suggestion-item">Error al buscar</div>';
-            }
+                if (data.length === 1) { selectDoctor(data[0].id); }
+            } catch (error) { console.error('Error buscando doctores:', error); }
         }
-
-        // --- Lógica de Sugerencias (sin cambios) ---
         function displaySuggestions(doctores) {
-            if (doctores.length === 0) {
-                suggestionsBox.innerHTML = '<div class="suggestion-item">No se encontraron coincidencias.</div>';
-                return;
-            }
-            suggestionsBox.innerHTML = doctores.map(doc => 
-                `<div class="suggestion-item" onclick="selectDoctor(${doc.id})">${doc.nombre}</div>`
-            ).join('');
+            if (doctores.length === 0) { suggestionsBox.innerHTML = '<div class="suggestion-item">No se encontraron coincidencias.</div>'; return; }
+            suggestionsBox.innerHTML = doctores.map(doc => `<div class="suggestion-item" onclick="selectDoctor(${doc.id})">${doc.nombre}</div>`).join('');
         }
 
-        // --- ¡LÓGICA DE SELECCIÓN ACTUALIZADA! ---
+        // --- Lógica de Selección (sin cambios, ya que el onclick está en el HTML) ---
         function selectDoctor(doctorId) {
             const doctor = allDoctores.find(doc => doc.id === doctorId);
             if (!doctor) return;
-
             rneDisplay.textContent = doctor.rne || '-';
             especialidadDisplay.textContent = doctor.especialidad || 'Sin especialidad';
             nombreDisplay.textContent = doctor.nombre || 'Sin nombre';
-
-            // --- ¡NUEVA LÓGICA PARA MOSTRAR LA FIRMA! ---
             if (doctor.firma) {
                 firmaDisplay.src = doctor.firma;
-                firmaContainer.style.display = 'block'; // Muestra el contenedor
+                firmaContainer.style.display = 'block';
             } else {
-                firmaContainer.style.display = 'none'; // Oculta el contenedor si no hay firma
+                firmaContainer.style.display = 'none';
             }
-
             beepSound.currentTime = 0;
             beepSound.play().catch(e => console.error("Error al reproducir sonido:", e));
-            
             searchInput.value = '';
             suggestionsBox.innerHTML = '';
         }
@@ -140,15 +141,11 @@
         // --- Listeners y Reconocimiento de Voz (sin cambios) ---
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                searchDoctores(searchInput.value.trim());
-            }, 300);
+            searchTimeout = setTimeout(() => { searchDoctores(searchInput.value.trim()); }, 300);
         });
-
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = SpeechRecognition ? new SpeechRecognition() : null;
         let isRecording = false;
-
         if (recognition) {
             recognition.lang = 'es-ES';
             recognition.continuous = false;
@@ -161,14 +158,10 @@
             recognition.onend = () => { isRecording = false; micButton.classList.remove('recording'); };
             recognition.onerror = (event) => { console.error('Error de voz:', event.error); };
         }
-
         micButton.addEventListener('click', () => {
             if (!recognition) { alert("Tu navegador no soporta el reconocimiento de voz."); return; }
-            if (isRecording) {
-                recognition.stop();
-            } else {
-                try { recognition.start(); } catch(e) { console.error("Error al iniciar reconocimiento:", e); }
-            }
+            if (isRecording) { recognition.stop(); } 
+            else { try { recognition.start(); } catch(e) { console.error("Error al iniciar reconocimiento:", e); } }
         });
     </script>
 </body>
